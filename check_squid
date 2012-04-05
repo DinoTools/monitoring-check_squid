@@ -90,8 +90,16 @@ $np->add_arg(
 	required => 0,
 );
 
+$np->add_arg(
+	spec => 'verbose|v',
+	help => "-v, --verbose\n"
+	. "	For debugging purpose",
+	required => 0,
+);
+
 $np->getopts;
 
+my $verbose = $np->opts->verbose;
 my $host = $np->opts->host;
 my $port = $np->opts->port;
 my $data = $np->opts->data;
@@ -117,6 +125,10 @@ $np->set_thresholds(critical => $critical, warning => $warning);
 
 @exec = ("-h", "\Q$host", "-p", "\Q$port", "-U", "\Q$user", "-W", "\Q$password", "mgr:info");
 
+if (! -x $squidclient) {
+	die "$squidclient not found !";
+}
+
 @result = `$squidclient @exec`;
 
 my $fd_available;
@@ -133,6 +145,7 @@ my $cache_bytehitratio5;
 my $cache_bytehitratio60;
 for my $line (@result)
 {
+	print $line if $verbose;
 	chomp($line);
 # Connection information for squid:
 #      Number of clients accessing cache:      1203
