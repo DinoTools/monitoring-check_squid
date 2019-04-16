@@ -10,12 +10,12 @@ Requriements
 
 - Perl 5
 - Perl Modules:
-    - Nagios::Plugin
+    - Monitoring::Plugin or Nagios::Plugin
 
 **RHEL/CentOS**
 
 - perl
-- perl-Nagios-Plugin
+- perl-Monitoring-Plugin or perl-Nagios-Plugin
 
 Installation
 ------------
