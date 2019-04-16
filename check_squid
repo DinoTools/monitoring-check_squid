@@ -47,22 +47,22 @@ BEGIN {
     }
     if (!$pkg_monitoring_available && !$pkg_nagios_available) {
         print("UNKNOWN - Unable to find module Monitoring::Plugin or Nagios::Plugin\n");
-        exit UNKNOWN;
+        exit 3;
     }
 }
 
-$np = Monitoring::Plugin->new(
+$mp = Monitoring::Plugin->new(
 	usage => "Usage: %s [ -v|--verbose ] [ -H <host> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]",
 	version => $VERSION);
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'host|H=s',
 	help => "-H, --host=<hostname>\n"
 	. "	Name of the proxy to check (default: localhost)",
 	required => 0
 );
 
-$np->add_arg( # Connections Cache Resources Memory FileDescriptors
+$mp->add_arg( # Connections Cache Resources Memory FileDescriptors
 	spec => 'data|d=s',
 	help => "-d, --data=<data>\n"
 	. "	Optional data to fetch (default: Connections)\n"
@@ -70,28 +70,28 @@ $np->add_arg( # Connections Cache Resources Memory FileDescriptors
 	required => 0
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'port|p=i',
 	help => "-p, --port=<port>\n"
 	. "	Optional port number (default: 3128)",
 	required => 0
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'user|U=s',
 	help => "-U, --user=<user>\n"
 	. "	Optional WWW user (default: root)",
 	required => 0
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'password|W=s',
 	help => "-W, --password=<password>\n"
 	. "	Optional WWW password",
 	required => 0
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'warning|w=s',
 	help => "-w, --warning=THRESHOLD\n"
 	. "	Warning threshold. See\n"
@@ -100,7 +100,7 @@ $np->add_arg(
 	required => 0,
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'critical|c=s',
 	help => "-c, --critical=THRESHOLD\n"
 	. "	Critical threshold. See\n"
@@ -109,31 +109,31 @@ $np->add_arg(
 	required => 0,
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'squidclient|s=s',
 	help => "-s, --squidclient=<squidclient_path>\n"
 	. "	Path of squidclient (default: Use which to get command path and if not found set /usr/sbin/squidclient)",
 	required => 0,
 );
 
-$np->add_arg(
+$mp->add_arg(
 	spec => 'verbose|v',
 	help => "-v, --verbose\n"
 	. "	For debugging purpose",
 	required => 0,
 );
 
-$np->getopts;
+$mp->getopts;
 
-my $verbose = $np->opts->verbose;
-my $host = $np->opts->host;
-my $port = $np->opts->port;
-my $data = $np->opts->data;
-my $user = $np->opts->user;
-my $password = $np->opts->password;
-my $critical = $np->opts->critical;
-my $warning = $np->opts->warning;
-my $squidclient = $np->opts->squidclient;
+my $verbose = $mp->opts->verbose;
+my $host = $mp->opts->host;
+my $port = $mp->opts->port;
+my $data = $mp->opts->data;
+my $user = $mp->opts->user;
+my $password = $mp->opts->password;
+my $critical = $mp->opts->critical;
+my $warning = $mp->opts->warning;
+my $squidclient = $mp->opts->squidclient;
 
 $host = 'localhost' if (!defined($host) or $host eq '');
 $port = 3128 if (!defined($port) or $port eq '');
@@ -146,7 +146,7 @@ $squidclient = `which squidclient` if (!defined($squidclient) or $squidclient eq
 $squidclient =~ s/^\s+|\s+$//g;
 $squidclient = '/usr/sbin/squidclient' if (!defined($squidclient) or $squidclient eq '');
 
-$np->set_thresholds(critical => $critical, warning => $warning);
+$mp->set_thresholds(critical => $critical, warning => $warning);
 
 # squidclient -h localhost -p 8080 -U root -W FPSlsker mgr:info
 
@@ -158,7 +158,7 @@ if (! -x $squidclient) {
 
 @result = `$squidclient @exec 2>&1`;
 
-if($? > 0) { $np->nagios_exit("CRITICAL",$result[0]); }
+if($? > 0) { wrap_exit('CRITICAL', $result[0]); }
 
 my $fd_available;
 my $fd_used;
@@ -261,37 +261,46 @@ for my $line (@result)
 
 if($data =~ /Connections/i)  # Connections Cache Resources Memory FileDescriptors
 {
-	$np->add_perfdata( label => "HTTP requests", value => $connection_nbhttpreceived, uom => "c");
-	$np->add_perfdata( label => "sent ICP requests", value => $connection_nbicpsent, uom => "c");
-	$np->add_perfdata( label => "received ICP requests", value => $connection_nbicpreceived, uom => "c");
-	$np->nagios_exit('OK', "$connection_nbclient clients, $connection_nbicpqueued queued ICP requests");
+	$mp->add_perfdata( label => "HTTP requests", value => $connection_nbhttpreceived, uom => "c");
+	$mp->add_perfdata( label => "sent ICP requests", value => $connection_nbicpsent, uom => "c");
+	$mp->add_perfdata( label => "received ICP requests", value => $connection_nbicpreceived, uom => "c");
+	wrap_exit('OK', "$connection_nbclient clients, $connection_nbicpqueued queued ICP requests");
 }
 if($data =~ /Cache/i)
 {
-	$np->add_perfdata( label => "Requests Hit Ratio 5min", value => $cache_requesthitratio5, uom => "%");
-	$np->add_perfdata( label => "Requests Hit Ratio 60min", value => $cache_requesthitratio60, uom => "%");
-	$np->add_perfdata( label => "Byte Hit Ratio 5min", value => $cache_bytehitratio5, uom => "%");
-	$np->add_perfdata( label => "Byte Hit Ratio 60min", value => $cache_bytehitratio60, uom => "%");
-	$np->nagios_exit('OK', "Requests Hit Ratio 5min: $cache_requesthitratio5, Requests Hit Ratio 60min: $cache_requesthitratio60, Byte Hit Ratio 5min: $cache_bytehitratio5, Byte Hit Ratio 60min: $cache_bytehitratio60");
+	$mp->add_perfdata( label => "Requests Hit Ratio 5min", value => $cache_requesthitratio5, uom => "%");
+	$mp->add_perfdata( label => "Requests Hit Ratio 60min", value => $cache_requesthitratio60, uom => "%");
+	$mp->add_perfdata( label => "Byte Hit Ratio 5min", value => $cache_bytehitratio5, uom => "%");
+	$mp->add_perfdata( label => "Byte Hit Ratio 60min", value => $cache_bytehitratio60, uom => "%");
+	wrap_exit('OK', "Requests Hit Ratio 5min: $cache_requesthitratio5, Requests Hit Ratio 60min: $cache_requesthitratio60, Byte Hit Ratio 5min: $cache_bytehitratio5, Byte Hit Ratio 60min: $cache_bytehitratio60");
 }
 if($data =~ /Resources/i)
 {
-	$np->add_perfdata( label => "CPU used 5s", value => $resource_cpu5s, uom => "%");
-	$np->add_perfdata( label => "CPU used 5m", value => $resource_cpu5m, uom => "%");
-	$np->add_perfdata( label => "CPU used 60m", value => $resource_cpu60m, uom => "%");
-	$np->nagios_exit('OK', "CPU used 5s: $resource_cpu5s, CPU used 5m: $resource_cpu5m, CPU used 60m: $resource_cpu60m");
+	$mp->add_perfdata( label => "CPU used 5s", value => $resource_cpu5s, uom => "%");
+	$mp->add_perfdata( label => "CPU used 5m", value => $resource_cpu5m, uom => "%");
+	$mp->add_perfdata( label => "CPU used 60m", value => $resource_cpu60m, uom => "%");
+	wrap_exit('OK', "CPU used 5s: $resource_cpu5s, CPU used 5m: $resource_cpu5m, CPU used 60m: $resource_cpu60m");
 }
 if($data =~ /Memory/i)
 {
 	my $t = Monitoring::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
-	$np->add_perfdata( label => "Memory used", value => $memory_used, uom => "KB", threshold => $t);
-	$np->add_perfdata( label => "Memory available", value => $memory_available, uom => "KB");
-	$np->nagios_exit($np->check_threshold($memory_used), "Using $memory_used KB of memory");
+	$mp->add_perfdata( label => "Memory used", value => $memory_used, uom => "KB", threshold => $t);
+	$mp->add_perfdata( label => "Memory available", value => $memory_available, uom => "KB");
+	wrap_exit($mp->check_threshold($memory_used), "Using $memory_used KB of memory");
 }
 if($data =~ /FileDescriptors/i)
 {
 	my $t = Monitoring::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
-	$np->add_perfdata( label => "Max FD", value => $fd_available);
-	$np->add_perfdata( label => "Cur FD", value => $fd_used, threshold => $t);
-	$np->nagios_exit($np->check_threshold($fd_used), "Using $fd_used file descriptors. (Maximum: $fd_available)");
+	$mp->add_perfdata( label => "Max FD", value => $fd_available);
+	$mp->add_perfdata( label => "Cur FD", value => $fd_used, threshold => $t);
+	wrap_exit($mp->check_threshold($fd_used), "Using $fd_used file descriptors. (Maximum: $fd_available)");
+}
+
+sub wrap_exit
+{
+    if($pkg_monitoring_available == 1) {
+        $mp->plugin_exit( @_ );
+    } else {
+        $mp->nagios_exit( @_ );
+    }
 }
