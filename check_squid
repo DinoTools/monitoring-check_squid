@@ -29,10 +29,29 @@
 my $VERSION = "1.1.1";
 
 $|;
-use Nagios::Plugin;
 # todo : use strict;
 
-$np = Nagios::Plugin->new(
+BEGIN {
+    eval {
+        require Monitoring::Plugin;
+        require Monitoring::Plugin::Functions;
+        $pkg_monitoring_available = 1;
+    };
+    if (!$pkg_monitoring_available) {
+        eval {
+            require Nagios::Plugin;
+            require Nagios::Plugin::Functions;
+            *Monitoring::Plugin:: = *Nagios::Plugin::;
+            $pkg_nagios_available = 1;
+        };
+    }
+    if (!$pkg_monitoring_available && !$pkg_nagios_available) {
+        print("UNKNOWN - Unable to find module Monitoring::Plugin or Nagios::Plugin\n");
+        exit UNKNOWN;
+    }
+}
+
+$np = Monitoring::Plugin->new(
 	usage => "Usage: %s [ -v|--verbose ] [ -H <host> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]",
 	version => $VERSION);
 
@@ -262,14 +281,14 @@ if($data =~ /Resources/i)
 }
 if($data =~ /Memory/i)
 {
-	my $t = Nagios::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
+	my $t = Monitoring::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
 	$np->add_perfdata( label => "Memory used", value => $memory_used, uom => "KB", threshold => $t);
 	$np->add_perfdata( label => "Memory available", value => $memory_available, uom => "KB");
 	$np->nagios_exit($np->check_threshold($memory_used), "Using $memory_used KB of memory");
 }
 if($data =~ /FileDescriptors/i)
 {
-	my $t = Nagios::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
+	my $t = Monitoring::Plugin::Threshold->set_thresholds(warning  => $warning, critical => $critical);
 	$np->add_perfdata( label => "Max FD", value => $fd_available);
 	$np->add_perfdata( label => "Cur FD", value => $fd_used, threshold => $t);
 	$np->nagios_exit($np->check_threshold($fd_used), "Using $fd_used file descriptors. (Maximum: $fd_available)");
