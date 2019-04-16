@@ -112,7 +112,7 @@ $np->add_arg(
 $np->add_arg(
 	spec => 'squidclient|s=s',
 	help => "-s, --squidclient=<squidclient_path>\n"
-	. "	Path of squidclient (default: /usr/sbin/squidclient)",
+	. "	Path of squidclient (default: Use which to get command path and if not found set /usr/sbin/squidclient)",
 	required => 0,
 );
 
@@ -142,6 +142,8 @@ $user = 'root' if (!defined($user) or $user eq '');
 $password = '' if (!defined($password));
 $critical = undef if (defined($critical) and $critical eq '');
 $warning = undef if (defined($warning) and $warning eq '');
+$squidclient = `which squidclient` if (!defined($squidclient) or $squidclient eq '');
+$squidclient =~ s/^\s+|\s+$//g;
 $squidclient = '/usr/sbin/squidclient' if (!defined($squidclient) or $squidclient eq '');
 
 $np->set_thresholds(critical => $critical, warning => $warning);
