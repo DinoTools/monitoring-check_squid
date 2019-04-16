@@ -26,10 +26,13 @@
 #    For information: cyril@feraudet.com
 ####################################################################
 
+use strict;
+use warnings FATAL => 'all';
+
 my $VERSION = "1.1.1";
 
-$|;
-# todo : use strict;
+my $pkg_nagios_available = 0;
+my $pkg_monitoring_available = 0;
 
 BEGIN {
     eval {
@@ -51,7 +54,7 @@ BEGIN {
     }
 }
 
-$mp = Monitoring::Plugin->new(
+my $mp = Monitoring::Plugin->new(
 	usage => "Usage: %s [ -v|--verbose ] [ -H <host> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]",
 	version => $VERSION);
 
@@ -150,13 +153,14 @@ $mp->set_thresholds(critical => $critical, warning => $warning);
 
 # squidclient -h localhost -p 8080 -U root -W FPSlsker mgr:info
 
-@exec = ("-h", "\Q$host", "-p", "\Q$port", "-U", "\Q$user", "-W", "\Q$password", "mgr:info");
+my @exec = ("-h", "\Q$host", "-p", "\Q$port", "-U", "\Q$user", "-W", "\Q$password", "mgr:info");
 
 if (! -x $squidclient) {
 	die "$squidclient not found";
 }
 
-@result = `$squidclient @exec 2>&1`;
+my $cmd = sprintf('%s %s 2>&1', $squidclient, join(" ", @exec));
+my @result = `$cmd`;
 
 if($? > 0) { wrap_exit('CRITICAL', $result[0]); }
 
@@ -168,10 +172,14 @@ my $connection_nbclient;
 my $connection_nbicpreceived;
 my $connection_nbicpsent;
 my $connection_nbicpqueued;
+my $connection_nbhttpreceived;
 my $cache_requesthitratio5;
 my $cache_requesthitratio60;
 my $cache_bytehitratio5;
 my $cache_bytehitratio60;
+my $resource_cpu5s;
+my $resource_cpu5m;
+my $resource_cpu60m;
 for my $line (@result)
 {
 	print $line if $verbose;
