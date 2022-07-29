@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 ###################################################################
+# This file is part of the check_squid Monitoring Plugin
+#
+# SPDX-FileCopyrightText: Cyril Feraudet
+# SPDX-FileCopyrightText: 2019- PhiBo (DinoTools)
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # check_squid is developed with GPL Licence 2.0
 #
 # GPL License: http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
